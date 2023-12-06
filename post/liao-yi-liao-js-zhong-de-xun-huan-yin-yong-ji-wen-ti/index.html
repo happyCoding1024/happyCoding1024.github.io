@@ -1,0 +1,274 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>聊一聊 JS 中的循环引用及问题 | 前端旧约</title>
+
+<link rel="shortcut icon" href="https://happyCoding1024.github.io/favicon.ico?v=1701842657321">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://happyCoding1024.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+    
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            前端旧约
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1701842657321"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    聊一聊 JS 中的循环引用及问题
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2023-11-27 ·
+                    </time>
+                    
+                        <a href="https://happyCoding1024.github.io/tag/Ip3ti47BU/" class="post-tags">
+                            # JavaScript
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <p>本文主要从 JS 中为什么会出现循环引用，垃圾回收策略中引用计数为什么有很大的问题，以及循环引用时的对象在使用 JSON.stringify 时为什么会报错，怎样解决这个问题简单谈谈自己的一些理解。</p>
+<h2 id="1-什么是循环引用">1. 什么是循环引用</h2>
+<p>当对象 1 中的某个属性指向对象 2，对象 2 中的某个属性指向对象 1 就会出现循环引用，（当然不止这一种情况，不过原理是一样的）下面通过代码和内存示意图来说明一下。</p>
+<pre><code class="language-js">function circularReference() {  
+    let obj1 = {    };    
+    let obj2 = {     b: obj1    };    
+    obj1.a = obj2;
+}
+</code></pre>
+<p>上述代码在内存中的示意图</p>
+<figure data-type="image" tabindex="1"><img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2hhcHB5Q29kaW5nMTAyNC9pbWFnZS1ob3N0aW5nL21hc3Rlci9pbWcvMjAyMDAxMDkyMDA3MzgucG5n?x-oss-process=image/format,png" alt="" loading="lazy"></figure>
+<p>从上图可以看出 obj1 中的 a 属性引用 obj2，obj2 中的 b 属性引用 obj1，这样就构成了循环引用。</p>
+<h2 id="2-js-中引用计数垃圾回收策略的问题">2. JS 中引用计数垃圾回收策略的问题</h2>
+<p>先简单讲一下 JS 中引用垃圾回收策略大体是什么样的一个原理，当一个变量被赋予一个引用类型的值时，这个引用类型的值的引用计数加 1。就像是代码中的 obj1 这个变量被赋予了 obj1 这个对象的地址，obj1 这个变量就指向了这个 obj1(右上)这个对象，obj1(右上)的引用计数就会加1.当变量 obj1的值不再是 obj1(右上)这个对象的地址时，obj1(右上)这个对象的引用计数就会减1.当这个 obj1（右上）对象的引用计数变成 0 后，垃圾收集器就会将其回收，因为此时没有变量指向你，也就没办法使用你了。</p>
+<p>看似很合理的垃圾回收策略为什么会有问题呢？</p>
+<p>就是上面讲到的循环引用导致的，下面来分析一下。当 obj1 这个变量执行 obj1 这个对象时，obj1 这个对象的引用计数会加 1，此时引用计数值为 1，接下来 obj2 的 b 属性又指向了 obj1 这个对象，所以此时 obj1 这个对象的引用计数为 2。同理 obj2 这个对象的引用计数也为2.</p>
+<p>当代码执行完后，会将变量 obj1 和 obj2 赋值为 null，但是此时 obj1 和 obj2 这两个对象的引用计数都为1，并不为 0，所以并不会进行垃圾回收，但是这两个对象已经没有作用了，在函数外部也不可能使用到它们，所以这就造成了内存泄露。</p>
+<p>在现在广泛采用的标记清除回收策略中就不会出现上面的问题，标记清除回收策略的大致流程是这样的，最开始的时候将所有的变量加上标记，当执行 cycularReference 函数的时候会将函数内部的变量这些标记清除，在函数执行完后再加上标记。这些被清除标记又被加上标记的变量就被视为将要删除的变量，原因是这些函数中的变量已经无法被访问到了。像上述代码中的 obj1 和 obj2 这两个变量在刚开始时有标记，进入函数后被清除标记，然后函数执行完后又被加上标记被视为将要清除的变量，因此不会出现引用计数中出现的问题，因为标记清除并不会关心引用的次数是多少。</p>
+<h2 id="3-循环引用的对象使用-jsonstringify-为什么会报错">3. 循环引用的对象使用 JSON.stringify 为什么会报错</h2>
+<p><code>JSON.stringify</code> 用于将一个 JS 对象序列化为一个 JSON 字符串，假设现在我们要将 obj1 这个对象序列化为 JSON 字符串，现在我们先将 obj1 这个对象打印出来看一下。</p>
+<pre><code class="language-js">function circularReference() {  
+  let obj1 = {    };    
+  let obj2 = {     b: obj1    };   
+  obj1.a = obj2;  
+  console.log(obj1);
+}
+circularReference();
+</code></pre>
+<p>结果如下所示：</p>
+<figure data-type="image" tabindex="2"><img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2hhcHB5Q29kaW5nMTAyNC9pbWFnZS1ob3N0aW5nL21hc3Rlci9pbWcvMjAyMDAxMDkyMDI5NTUucG5n?x-oss-process=image/format,png" alt="" loading="lazy"></figure>
+<p>obj1 这个对象和 obj2 会无限相互引用，JSON.tostringify 无法将一个无限引用的对象序列化为 JOSN 字符串。</p>
+<p>下面是 MDN 的解释：</p>
+<blockquote>
+<p>JSON.stringify() 将值转换为相应的JSON格式：转换值如果有 toJSON() 方法，该方法定义什么值将被序列化。非数组对象的属性不能保证以特定的顺序出现在序列化后的字符串中。布尔值、数字、字符串的包装对象在序列化过程中会自动转换成对应的原始值。undefined、任意的函数以及 symbol 值，在序列化过程中会被忽略（出现在非数组对象的属性值中时）或者被转换成 null（出现在数组中时）。函数、undefined 被单独转换时，会返回 undefined，如JSON.stringify(function(){}) or JSON.stringify(undefined).对包含循环引用的对象（对象之间相互引用，形成无限循环）执行此方法，会抛出错误。所有以 symbol 为属性键的属性都会被完全忽略掉，即便 replacer 参数中强制指定包含了它们。Date 日期调用了 toJSON() 将其转换为了 string 字符串（同Date.toISOString()），因此会被当做字符串处理。NaN 和 Infinity 格式的数值及 null 都会被当做 null。其他类型的对象，包括 Map/Set/WeakMap/WeakSet，仅会序列化可枚举的属性。</p>
+</blockquote>
+<p>我们可以从加粗的字体中看到，对包含循环引用的对象执行 JSON.stringify，会抛出错误。</p>
+<figure data-type="image" tabindex="3"><img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2hhcHB5Q29kaW5nMTAyNC9pbWFnZS1ob3N0aW5nL21hc3Rlci9pbWcvSlNPTi5zdHJpbmdpZnklRTYlOEElQTUlRTklOTQlOTkucG5n?x-oss-process=image/format,png" alt="" loading="lazy"></figure>
+<p><strong>解决方法</strong></p>
+<p>一个自然的想法能不能消除循环引用，一个 <a href="https://github.com/douglascrockford/JSON-js">JSON 扩展包</a> 做到了这一点， 使用 JSON.decycle 可以去除循环引用。为了方便测试我直接在 JSON 扩展包的 Github 仓库中下载了 cycle.js 这个函数，将下面这段代码赋值到最下面，然后利用 node 运行进行测试，问题得到解决，结果如下图所示。</p>
+<pre><code class="language-js">function circularReference() {  
+  let obj1 = {  };  
+  let obj2 = {    b: obj1  };  
+  obj1.a = obj2;  
+  let c = JSON.decycle(obj1);  
+  console.log(JSON.stringify(c));
+}
+circularReference();
+</code></pre>
+<p>运行结果</p>
+<figure data-type="image" tabindex="4"><img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2hhcHB5Q29kaW5nMTAyNC9pbWFnZS1ob3N0aW5nL21hc3Rlci9pbWcvMjAyMDAxMDklRTYlQjYlODglRTklOTklQTQlRTUlQkUlQUElRTclOEUlQUYlRTUlQkMlOTUlRTclOTQlQTgucG5n?x-oss-process=image/format,png" alt="" loading="lazy"></figure>
+<p>完，如有不恰当之处，欢迎指正哦。</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://happyCoding1024.github.io/post/react-bi-bao-xian-jing/" class="post-title gt-a-link">
+                    React 闭包陷阱
+                </a>
+            </div>
+        
+
+        
+
+        
+            
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk/dist/gitalk.min.css">
+<script src="https://cdn.jsdelivr.net/npm/gitalk/dist/gitalk.min.js"></script>
+<script>
+    // md5.min.js
+    !function(n){
+        "use strict";
+        function d(n,t){var r=(65535&n)+(65535&t);return(n>>16)+(t>>16)+(r>>16)<<16|65535&r}
+        function f(n,t,r,e,o,u){return d((c=d(d(t,n),d(e,u)))<<(f=o)|c>>>32-f,r);var c,f}
+        function l(n,t,r,e,o,u,c){return f(t&r|~t&e,n,t,o,u,c)}
+        function v(n,t,r,e,o,u,c){return f(t&e|r&~e,n,t,o,u,c)}
+        function g(n,t,r,e,o,u,c){return f(t^r^e,n,t,o,u,c)}
+        function m(n,t,r,e,o,u,c){return f(r^(t|~e),n,t,o,u,c)}
+        function i(n,t){var r,e,o,u,c;n[t>>5]|=128<<t%32,n[14+(t+64>>>9<<4)]=t;var f=1732584193,i=-271733879,a=-1732584194,h=271733878;for(r=0;r<n.length;r+=16)f=l(e=f,o=i,u=a,c=h,n[r],7,-680876936),h=l(h,f,i,a,n[r+1],12,-389564586),a=l(a,h,f,i,n[r+2],17,606105819),i=l(i,a,h,f,n[r+3],22,-1044525330),f=l(f,i,a,h,n[r+4],7,-176418897),h=l(h,f,i,a,n[r+5],12,1200080426),a=l(a,h,f,i,n[r+6],17,-1473231341),i=l(i,a,h,f,n[r+7],22,-45705983),f=l(f,i,a,h,n[r+8],7,1770035416),h=l(h,f,i,a,n[r+9],12,-1958414417),a=l(a,h,f,i,n[r+10],17,-42063),i=l(i,a,h,f,n[r+11],22,-1990404162),f=l(f,i,a,h,n[r+12],7,1804603682),h=l(h,f,i,a,n[r+13],12,-40341101),a=l(a,h,f,i,n[r+14],17,-1502002290),f=v(f,i=l(i,a,h,f,n[r+15],22,1236535329),a,h,n[r+1],5,-165796510),h=v(h,f,i,a,n[r+6],9,-1069501632),a=v(a,h,f,i,n[r+11],14,643717713),i=v(i,a,h,f,n[r],20,-373897302),f=v(f,i,a,h,n[r+5],5,-701558691),h=v(h,f,i,a,n[r+10],9,38016083),a=v(a,h,f,i,n[r+15],14,-660478335),i=v(i,a,h,f,n[r+4],20,-405537848),f=v(f,i,a,h,n[r+9],5,568446438),h=v(h,f,i,a,n[r+14],9,-1019803690),a=v(a,h,f,i,n[r+3],14,-187363961),i=v(i,a,h,f,n[r+8],20,1163531501),f=v(f,i,a,h,n[r+13],5,-1444681467),h=v(h,f,i,a,n[r+2],9,-51403784),a=v(a,h,f,i,n[r+7],14,1735328473),f=g(f,i=v(i,a,h,f,n[r+12],20,-1926607734),a,h,n[r+5],4,-378558),h=g(h,f,i,a,n[r+8],11,-2022574463),a=g(a,h,f,i,n[r+11],16,1839030562),i=g(i,a,h,f,n[r+14],23,-35309556),f=g(f,i,a,h,n[r+1],4,-1530992060),h=g(h,f,i,a,n[r+4],11,1272893353),a=g(a,h,f,i,n[r+7],16,-155497632),i=g(i,a,h,f,n[r+10],23,-1094730640),f=g(f,i,a,h,n[r+13],4,681279174),h=g(h,f,i,a,n[r],11,-358537222),a=g(a,h,f,i,n[r+3],16,-722521979),i=g(i,a,h,f,n[r+6],23,76029189),f=g(f,i,a,h,n[r+9],4,-640364487),h=g(h,f,i,a,n[r+12],11,-421815835),a=g(a,h,f,i,n[r+15],16,530742520),f=m(f,i=g(i,a,h,f,n[r+2],23,-995338651),a,h,n[r],6,-198630844),h=m(h,f,i,a,n[r+7],10,1126891415),a=m(a,h,f,i,n[r+14],15,-1416354905),i=m(i,a,h,f,n[r+5],21,-57434055),f=m(f,i,a,h,n[r+12],6,1700485571),h=m(h,f,i,a,n[r+3],10,-1894986606),a=m(a,h,f,i,n[r+10],15,-1051523),i=m(i,a,h,f,n[r+1],21,-2054922799),f=m(f,i,a,h,n[r+8],6,1873313359),h=m(h,f,i,a,n[r+15],10,-30611744),a=m(a,h,f,i,n[r+6],15,-1560198380),i=m(i,a,h,f,n[r+13],21,1309151649),f=m(f,i,a,h,n[r+4],6,-145523070),h=m(h,f,i,a,n[r+11],10,-1120210379),a=m(a,h,f,i,n[r+2],15,718787259),i=m(i,a,h,f,n[r+9],21,-343485551),f=d(f,e),i=d(i,o),a=d(a,u),h=d(h,c);return[f,i,a,h]}
+        function a(n){var t,r="",e=32*n.length;for(t=0;t<e;t+=8)r+=String.fromCharCode(n[t>>5]>>>t%32&255);return r}
+        function h(n){var t,r=[];for(r[(n.length>>2)-1]=void 0,t=0;t<r.length;t+=1)r[t]=0;var e=8*n.length;for(t=0;t<e;t+=8)r[t>>5]|=(255&n.charCodeAt(t/8))<<t%32;return r}
+        function e(n){var t,r,e="0123456789abcdef",o="";for(r=0;r<n.length;r+=1)t=n.charCodeAt(r),o+=e.charAt(t>>>4&15)+e.charAt(15&t);return o}
+        function r(n){return unescape(encodeURIComponent(n))}
+        function o(n){return a(i(h(t=r(n)),8*t.length));var t}
+        function u(n,t){return function(n,t){var r,e,o=h(n),u=[],c=[];for(u[15]=c[15]=void 0,16<o.length&&(o=i(o,8*n.length)),r=0;r<16;r+=1)u[r]=909522486^o[r],c[r]=1549556828^o[r];return e=i(u.concat(h(t)),512+8*t.length),a(i(c.concat(e),640))}(r(n),r(t))}
+        function t(n,t,r){return t?r?u(t,n):e(u(t,n)):r?o(n):e(o(n))}
+        "function"==typeof define&&define.amd?define(function(){return t}):"object"==typeof module&&module.exports?module.exports=t:n.md5=t;
+    }(this);
+</script>
+
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '16c9ddf2b61c12afcad1',
+    clientSecret: '592688ab6c928d32cfd6065d0168814e4099b1e4',
+    repo: 'happyCoding1024.github.io',
+    owner: 'happyCoding1024',
+    admin: ['happyCoding1024'],
+    id: md5(location.pathname),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false       // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+            
+
+            
+        
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">前端旧约</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/happyCoding1024" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://happyCoding1024.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

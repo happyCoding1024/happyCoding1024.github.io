@@ -1,0 +1,356 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title> JSX 代码是如何“摇身一变”成为 DOM 的？ | 前端旧约</title>
+
+<link rel="shortcut icon" href="https://happyCoding1024.github.io/favicon.ico?v=1701842657321">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://happyCoding1024.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+    
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            前端旧约
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1701842657321"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                     JSX 代码是如何“摇身一变”成为 DOM 的？
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2023-12-05 ·
+                    </time>
+                    
+                </div>
+                <div class="post-content">
+                    <p>JSX 是一种语法，并不是 React 中的内容，时下接入 JSX 语法的框架越来越多，但与之缘分最深的仍然是 React。本节来讲一下 React 是如何摇身一变成为 DOM 的。</p>
+<p>我们平时在写React时会用 JSX 来描述组件的内容，例如下面的代码中，render 方法 return 的内容就是 JSX 代码。</p>
+<pre><code class="language-jsx">class App extends React.Component {
+  render() {
+    return (
+      &lt;div className=&quot;App&quot;&gt;
+        &lt;h1 className=&quot;title&quot;&gt;I am the title&lt;/h1&gt;
+        &lt;p className=&quot;content&quot;&gt;I am the content&lt;/p&gt;
+      &lt;/div&gt;
+    );
+  }
+}
+</code></pre>
+<p>我们考虑以下三个问题：</p>
+<ol>
+<li>JSX 的本质是什么，它和 JS 之间到底是什么关系？</li>
+<li>React 为什么要用 JSX？</li>
+<li>JSX 是如何映射为 DOM 的？</li>
+</ol>
+<p>这一节我们就将这三个问题一一解答。</p>
+<h2 id="1jsx-的本质是什么它和js之间的到底是什么关系">1）JSX 的本质是什么？它和JS之间的到底是什么关系？</h2>
+<p>JSX 到底是什么，我们先来看看 React 官网给出的一段定义：</p>
+<blockquote>
+<p>JSX 是 JavaScript 的一种语法扩展，它和模板语言很接近，但是它充分具备 JavaScript 的能力。</p>
+</blockquote>
+<p>“语法扩展”这一点在理解上几乎不会产生歧义，不过“它充分具备 JavaScript 的能力”这句，却总让人摸不着头脑，JSX 和 JS 怎么看也不像是一路人啊？这就引出了“JSX 语法是如何在 JavaScript 中生效的”这个问题。</p>
+<p>JSX 是 JavaScript 的扩展，而不是 JavaScript 的某个版本，因此浏览器并不会天然支持，那么 JSX 是如何在 JavaScript 中生效的呢？</p>
+<p>React 官网是这样的解释的：</p>
+<blockquote>
+<p>JSX 会被编译为 React.createElement()， React.createElement() 将返回一个叫作“React Element”的 JS 对象。</p>
+</blockquote>
+<p>那么 JSX 如何转换成 React.createElement() 的呢？答案就是通过 babel 转换。</p>
+<p>我们直接打开 babel playground 来写一段 JSX 代码看一下 babel 转换后的结果。![image-20231204112041472](/Users/jiuyuezhang/Library/Application Support/typora-user-images/image-20231204112041472.png)</p>
+<p>可以看到 JSX 代码都被转换成了 React.createElement 调用。</p>
+<p>接下来我们总结一下来回答标题提到的两个问题。</p>
+<p>JSX 是 JavaScript 的扩展，不是 JavaScipt 的某个版本，需要通过 Babel 进行转换成 JavaScript 代码。</p>
+<p>JSX 会被 babel 转换为 React.CreateElement(...) 调用的形式，执行后返回的结果是一个对象。</p>
+<h2 id="2react-为什么要用-jsx">2）React 为什么要用 JSX？</h2>
+<p>从上一节我们知道  JSX  等价于一次 React.createElement 调用，那么 React 官方为什么不直接引导我们用 React.createElement 来创建元素呢？</p>
+<p>在实际功能效果一致的前提下，JSX 代码层次分明、嵌套关系清晰；而 React.createElement 代码则给人一种非常混乱的“杂糅感”，这样的代码不仅读起来不友好，写起来也费劲。</p>
+<p>JSX 语法糖允许前端开发者使用我们最为熟悉的类 HTML 标签语法来创建虚拟 DOM，在降低学习成本的同时，也提升了研发效率与研发体验。</p>
+<h2 id="3jsx-是如何映射为-dom-的">3）JSX 是如何映射为 DOM 的？</h2>
+<p>我们知道 JSX 经过babel转换后会变成 <code>React.createElement(...)</code> 的形式，接下来我们就来一起探讨一下 <code>React.createElement(...)</code> 是如何工作的？</p>
+<figure data-type="image" tabindex="1"><img src="https://raw.githubusercontent.com/happyCoding1024/image-hosting/master/img/image-20231204114231084.png" alt="" loading="lazy"></figure>
+<h3 id="31-入参解读创造一个元素需要知道哪些信息">3.1 入参解读：创造一个元素需要知道哪些信息</h3>
+<p>我们先来看看方法的入参：</p>
+<pre><code>export function createElement(type, config, children)
+</code></pre>
+<p>createElement 有 3 个入参，这 3 个入参囊括了 React 创建一个元素所需要知道的全部信息。</p>
+<ul>
+<li>type：用于标识节点的类型。它可以是类似“h1”“div”这样的标准 HTML 标签字符串，也可以是 React 组件类型或 React fragment 类型。</li>
+<li>config：以对象形式传入，组件所有的属性都会以键值对的形式存储在 config 对象中。</li>
+<li>children：子节点，如果有多个子节点，那么依次往后写。</li>
+</ul>
+<p>举个例子：</p>
+<pre><code class="language-jsx">&lt;ul className=&quot;list&quot;&gt;
+  &lt;li key=&quot;1&quot;&gt;1&lt;/li&gt;
+  &lt;li key=&quot;2&quot;&gt;2&lt;/li&gt;
+&lt;/ul&gt;
+</code></pre>
+<p>经过 Babel 转换后的形式为：</p>
+<blockquote>
+<p>注意：从第三个入参开始往后，传入的参数都是 children</p>
+</blockquote>
+<pre><code class="language-javascript">React.createElement(&quot;ul&quot;, {
+  // 传入属性键值对
+  className: &quot;list&quot;
+}, React.createElement(&quot;li&quot;, {
+  key: &quot;1&quot;
+}, &quot;1&quot;), React.createElement(&quot;li&quot;, {
+  key: &quot;2&quot;
+}, &quot;2&quot;));
+
+</code></pre>
+<h3 id="32-出参解读初识虚拟dom">3.2 出参解读：初识虚拟DOM</h3>
+<p>下面的代码是 React.createElement(...) 调用的返回值格式。</p>
+<blockquote>
+<p>注意：这是 fiber节点之前的每个节点的格式。</p>
+</blockquote>
+<pre><code class="language-react">const ReactElement = function(type, key, ref, self, source, owner, props) {
+  const element = {
+    // REACT_ELEMENT_TYPE是一个常量，用来标识该对象是一个ReactElement
+    $$typeof: REACT_ELEMENT_TYPE,
+
+    // 内置属性赋值
+    type: type,
+    key: key,
+    ref: ref,
+    props: props,
+
+    // 记录创造该元素的组件
+    _owner: owner,
+  };
+
+  // 
+  if (__DEV__) {
+    // 这里是一些针对 __DEV__ 环境下的处理，对于大家理解主要逻辑意义不大，此处我直接省略掉，以免混淆视听
+  }
+
+  return element;
+};
+</code></pre>
+<p>举个例子</p>
+<pre><code class="language-jsx">const AppJSX = (&lt;div className=&quot;App&quot;&gt;
+
+  &lt;h1 className=&quot;title&quot;&gt;I am the title&lt;/h1&gt;
+
+  &lt;p className=&quot;content&quot;&gt;I am the content&lt;/p&gt;
+
+&lt;/div&gt;)
+
+console.log(AppJSX)
+</code></pre>
+<p>输出为：</p>
+<figure data-type="image" tabindex="2"><img src="https://raw.githubusercontent.com/happyCoding1024/image-hosting/master/img/202312051052821.png" alt="" loading="lazy"></figure>
+<p>这个 ReactElement 对象实例，本质上是<strong>以 JavaScript 对象形式存在的对 DOM 的描述</strong>，也就是老生常谈的“虚拟 DOM”（<strong>准确地说，是虚拟 DOM 中的一个节点</strong>。</p>
+<p>既然是“虚拟 DOM”，那就意味着和渲染到页面上的真实 DOM 之间还有一些距离，这个“距离”，就是由大家喜闻乐见的<strong>ReactDOM.render</strong>方法来填补的。</p>
+<p>在每一个 React 项目的入口文件中，都少不了对 React.render 函数的调用。下面我简单介绍下 ReactDOM.render 方法的入参规则：</p>
+<p>复制代码</p>
+<pre><code class="language-jsx">ReactDOM.render(
+    // 需要渲染的元素（ReactElement）
+    element, 
+    // 元素挂载的目标容器（一个真实DOM）
+    container,
+    // 回调函数，可选参数，可以用来处理渲染结束后的逻辑
+    [callback]
+)
+</code></pre>
+<p>ReactDOM.render 方法可以接收 3 个参数，其中<strong>第二个参数就是一个真实的 DOM 节点</strong>，<strong>这个真实的 DOM 节点充当“容器”的角色</strong>，React 元素最终会被渲染到这个“容器”里面去。比如，示例中的 App 组件，它对应的 render 调用是这样的：</p>
+<pre><code class="language-jsx">const rootElement = document.getElementById(&quot;root&quot;);
+ReactDOM.render(&lt;App /&gt;, rootElement);
+</code></pre>
+<p>注意，这个真实 DOM 一定是确实存在的。比如，在 App 组件对应的 index.html 中，已经提前预置 了 id 为 root 的根节点：</p>
+<pre><code class="language-jsx">&lt;body&gt;
+    &lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+&lt;/body&gt;
+</code></pre>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://happyCoding1024.github.io/post/react-hooks/" class="post-title gt-a-link">
+                    React Hooks 
+                </a>
+            </div>
+        
+
+        
+
+        
+            
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk/dist/gitalk.min.css">
+<script src="https://cdn.jsdelivr.net/npm/gitalk/dist/gitalk.min.js"></script>
+<script>
+    // md5.min.js
+    !function(n){
+        "use strict";
+        function d(n,t){var r=(65535&n)+(65535&t);return(n>>16)+(t>>16)+(r>>16)<<16|65535&r}
+        function f(n,t,r,e,o,u){return d((c=d(d(t,n),d(e,u)))<<(f=o)|c>>>32-f,r);var c,f}
+        function l(n,t,r,e,o,u,c){return f(t&r|~t&e,n,t,o,u,c)}
+        function v(n,t,r,e,o,u,c){return f(t&e|r&~e,n,t,o,u,c)}
+        function g(n,t,r,e,o,u,c){return f(t^r^e,n,t,o,u,c)}
+        function m(n,t,r,e,o,u,c){return f(r^(t|~e),n,t,o,u,c)}
+        function i(n,t){var r,e,o,u,c;n[t>>5]|=128<<t%32,n[14+(t+64>>>9<<4)]=t;var f=1732584193,i=-271733879,a=-1732584194,h=271733878;for(r=0;r<n.length;r+=16)f=l(e=f,o=i,u=a,c=h,n[r],7,-680876936),h=l(h,f,i,a,n[r+1],12,-389564586),a=l(a,h,f,i,n[r+2],17,606105819),i=l(i,a,h,f,n[r+3],22,-1044525330),f=l(f,i,a,h,n[r+4],7,-176418897),h=l(h,f,i,a,n[r+5],12,1200080426),a=l(a,h,f,i,n[r+6],17,-1473231341),i=l(i,a,h,f,n[r+7],22,-45705983),f=l(f,i,a,h,n[r+8],7,1770035416),h=l(h,f,i,a,n[r+9],12,-1958414417),a=l(a,h,f,i,n[r+10],17,-42063),i=l(i,a,h,f,n[r+11],22,-1990404162),f=l(f,i,a,h,n[r+12],7,1804603682),h=l(h,f,i,a,n[r+13],12,-40341101),a=l(a,h,f,i,n[r+14],17,-1502002290),f=v(f,i=l(i,a,h,f,n[r+15],22,1236535329),a,h,n[r+1],5,-165796510),h=v(h,f,i,a,n[r+6],9,-1069501632),a=v(a,h,f,i,n[r+11],14,643717713),i=v(i,a,h,f,n[r],20,-373897302),f=v(f,i,a,h,n[r+5],5,-701558691),h=v(h,f,i,a,n[r+10],9,38016083),a=v(a,h,f,i,n[r+15],14,-660478335),i=v(i,a,h,f,n[r+4],20,-405537848),f=v(f,i,a,h,n[r+9],5,568446438),h=v(h,f,i,a,n[r+14],9,-1019803690),a=v(a,h,f,i,n[r+3],14,-187363961),i=v(i,a,h,f,n[r+8],20,1163531501),f=v(f,i,a,h,n[r+13],5,-1444681467),h=v(h,f,i,a,n[r+2],9,-51403784),a=v(a,h,f,i,n[r+7],14,1735328473),f=g(f,i=v(i,a,h,f,n[r+12],20,-1926607734),a,h,n[r+5],4,-378558),h=g(h,f,i,a,n[r+8],11,-2022574463),a=g(a,h,f,i,n[r+11],16,1839030562),i=g(i,a,h,f,n[r+14],23,-35309556),f=g(f,i,a,h,n[r+1],4,-1530992060),h=g(h,f,i,a,n[r+4],11,1272893353),a=g(a,h,f,i,n[r+7],16,-155497632),i=g(i,a,h,f,n[r+10],23,-1094730640),f=g(f,i,a,h,n[r+13],4,681279174),h=g(h,f,i,a,n[r],11,-358537222),a=g(a,h,f,i,n[r+3],16,-722521979),i=g(i,a,h,f,n[r+6],23,76029189),f=g(f,i,a,h,n[r+9],4,-640364487),h=g(h,f,i,a,n[r+12],11,-421815835),a=g(a,h,f,i,n[r+15],16,530742520),f=m(f,i=g(i,a,h,f,n[r+2],23,-995338651),a,h,n[r],6,-198630844),h=m(h,f,i,a,n[r+7],10,1126891415),a=m(a,h,f,i,n[r+14],15,-1416354905),i=m(i,a,h,f,n[r+5],21,-57434055),f=m(f,i,a,h,n[r+12],6,1700485571),h=m(h,f,i,a,n[r+3],10,-1894986606),a=m(a,h,f,i,n[r+10],15,-1051523),i=m(i,a,h,f,n[r+1],21,-2054922799),f=m(f,i,a,h,n[r+8],6,1873313359),h=m(h,f,i,a,n[r+15],10,-30611744),a=m(a,h,f,i,n[r+6],15,-1560198380),i=m(i,a,h,f,n[r+13],21,1309151649),f=m(f,i,a,h,n[r+4],6,-145523070),h=m(h,f,i,a,n[r+11],10,-1120210379),a=m(a,h,f,i,n[r+2],15,718787259),i=m(i,a,h,f,n[r+9],21,-343485551),f=d(f,e),i=d(i,o),a=d(a,u),h=d(h,c);return[f,i,a,h]}
+        function a(n){var t,r="",e=32*n.length;for(t=0;t<e;t+=8)r+=String.fromCharCode(n[t>>5]>>>t%32&255);return r}
+        function h(n){var t,r=[];for(r[(n.length>>2)-1]=void 0,t=0;t<r.length;t+=1)r[t]=0;var e=8*n.length;for(t=0;t<e;t+=8)r[t>>5]|=(255&n.charCodeAt(t/8))<<t%32;return r}
+        function e(n){var t,r,e="0123456789abcdef",o="";for(r=0;r<n.length;r+=1)t=n.charCodeAt(r),o+=e.charAt(t>>>4&15)+e.charAt(15&t);return o}
+        function r(n){return unescape(encodeURIComponent(n))}
+        function o(n){return a(i(h(t=r(n)),8*t.length));var t}
+        function u(n,t){return function(n,t){var r,e,o=h(n),u=[],c=[];for(u[15]=c[15]=void 0,16<o.length&&(o=i(o,8*n.length)),r=0;r<16;r+=1)u[r]=909522486^o[r],c[r]=1549556828^o[r];return e=i(u.concat(h(t)),512+8*t.length),a(i(c.concat(e),640))}(r(n),r(t))}
+        function t(n,t,r){return t?r?u(t,n):e(u(t,n)):r?o(n):e(o(n))}
+        "function"==typeof define&&define.amd?define(function(){return t}):"object"==typeof module&&module.exports?module.exports=t:n.md5=t;
+    }(this);
+</script>
+
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '16c9ddf2b61c12afcad1',
+    clientSecret: '592688ab6c928d32cfd6065d0168814e4099b1e4',
+    repo: 'happyCoding1024.github.io',
+    owner: 'happyCoding1024',
+    admin: ['happyCoding1024'],
+    id: md5(location.pathname),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false       // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+            
+
+            
+        
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">前端旧约</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/happyCoding1024" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://happyCoding1024.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>
